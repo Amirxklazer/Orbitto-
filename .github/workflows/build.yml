@@ -1,0 +1,35 @@
+name: Build Orbitto NRO
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    # Use the same devkita64 image tag your other Switch repos pin (from the Copilot-fixed build.yml).
+    container: devkitpro/devkita64
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install SDL2 libraries
+        run: |
+          PAC=$(command -v dkp-pacman || command -v pacman)
+          $PAC -S --noconfirm --needed switch-sdl2 switch-sdl2_image switch-sdl2_ttf switch-pkg-config
+
+      - name: Arrange files (zip is flat)
+        run: |
+          mkdir -p source romfs
+          [ -f main.cpp ] && mv -f main.cpp source/ || true
+          mv -f ./*.png ./*.ttf romfs/ 2>/dev/null || true
+          ls -R . | head -60
+
+      - name: Build
+        run: make -j$(nproc)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Orbitto
+          path: Orbitto.nro
